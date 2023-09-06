@@ -37,15 +37,14 @@ projects :
             LOKI_ENABLE_NO_INSTALL=ON
 
     - field_api :
-        git     : ${BITBUCKET}/rdx/field_api
-        version : master
+        git     : git@github.com:ecmwf-ifs/field_api.git
+        version : naan-cuda
         optional: true
         require : ecbuild
         cmake   : >
             BUILD_field_api=OFF
-            ENABLE_FIELD_API_TESTS=OFF
-            ENABLE_FIELD_API_FIAT_BUILD=OFF
-            FIELD_API_UTIL_MODULE_PATH=${CMAKE_SOURCE_DIR}/cloudsc-dwarf/src/common/module
+            ENABLE_SINGLE_PRECISION=OFF
+            UTIL_MODULE_PATH=${CMAKE_SOURCE_DIR}/cloudsc-dwarf/src/common/module
 
     - cloudsc-dwarf :
         # The CLOUDSC dwarf project with multiple implementations
@@ -61,7 +60,9 @@ options :
 
     - single-precision :
         help  : Enable single precision build of the dwarf
-        cmake : ENABLE_SINGLE_PRECISION=ON
+        cmake : >
+            ENABLE_SINGLE_PRECISION=ON
+            FIELD_API_DEFINITIONS=SINGLE
 
     - with-gpu :
         help  : Enable GPU kernels
