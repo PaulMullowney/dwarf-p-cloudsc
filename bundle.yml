@@ -38,7 +38,7 @@ projects :
 
     - field_api :
         git     : git@github.com:ecmwf-ifs/field_api.git
-        version : naan-cuda
+        version : naan-field-buffer
         optional: true
         require : ecbuild
         cmake   : >
