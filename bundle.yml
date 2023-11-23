@@ -59,9 +59,11 @@ options :
         cmake : CMAKE_TOOLCHAIN_FILE={{value}}
 
     - single-precision :
+        # Disabling DOUBLE_PRECISION is just for FIELD_API
         help  : Enable single precision build of the dwarf
         cmake : >
             ENABLE_SINGLE_PRECISION=ON
+            ENABLE_DOUBLE_PRECISION=OFF
             FIELD_API_DEFINITIONS=SINGLE
 
     - with-gpu :
