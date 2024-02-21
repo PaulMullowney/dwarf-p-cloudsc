@@ -13,35 +13,35 @@ ecbuild_add_option( FEATURE CLOUDSC_GPU_KERNELS
 )
 
 # Define the CLAW-based GPU dwarf variant as an ECBuild feature
-ecbuild_add_option( FEATURE CLOUDSC_GPU_CLAW
-    DESCRIPTION "Build optimized GPU version of CLOUDSC derived from CLAW using OpenACC" DEFAULT OFF
-    CONDITION Serialbox_FOUND OR HDF5_FOUND
-)
+# ecbuild_add_option( FEATURE CLOUDSC_GPU_CLAW
+#     DESCRIPTION "Build optimized GPU version of CLOUDSC derived from CLAW using OpenACC" DEFAULT OFF
+#     CONDITION Serialbox_FOUND OR HDF5_FOUND
+# )
 
-ecbuild_add_option( FEATURE CLOUDSC_GPU_SCC
-    DESCRIPTION "Build optimized GPU version of CLOUDSC using SCC layout and OpenACC" DEFAULT OFF
-    CONDITION Serialbox_FOUND OR HDF5_FOUND
-)
+# ecbuild_add_option( FEATURE CLOUDSC_GPU_SCC
+#     DESCRIPTION "Build optimized GPU version of CLOUDSC using SCC layout and OpenACC" DEFAULT OFF
+#     CONDITION Serialbox_FOUND OR HDF5_FOUND
+# )
 
-ecbuild_add_option( FEATURE CLOUDSC_GPU_SCC_CUF
-    DESCRIPTION "Build optimized GPU version of CLOUDSC using SCC layout in CUDA" DEFAULT OFF
-    CONDITION HAVE_CUDA AND ( Serialbox_FOUND OR HDF5_FOUND )
-)
+# ecbuild_add_option( FEATURE CLOUDSC_GPU_SCC_CUF
+#     DESCRIPTION "Build optimized GPU version of CLOUDSC using SCC layout in CUDA" DEFAULT OFF
+#     CONDITION HAVE_CUDA AND ( Serialbox_FOUND OR HDF5_FOUND )
+# )
 
-ecbuild_add_option( FEATURE CLOUDSC_GPU_SCC_CUF_K_CACHING
-    DESCRIPTION "Build (further) optimized GPU version of CLOUDSC using SCC layout in CUDA" DEFAULT OFF
-    CONDITION HAVE_CUDA AND ( Serialbox_FOUND OR HDF5_FOUND )
-)
+# ecbuild_add_option( FEATURE CLOUDSC_GPU_SCC_CUF_K_CACHING
+#     DESCRIPTION "Build (further) optimized GPU version of CLOUDSC using SCC layout in CUDA" DEFAULT OFF
+#     CONDITION HAVE_CUDA AND ( Serialbox_FOUND OR HDF5_FOUND )
+# )
 
-ecbuild_add_option( FEATURE CLOUDSC_GPU_SCC_HOIST
-    DESCRIPTION "Build optimized GPU version of CLOUDSC using SCC with hoisted temporary arrays and OpenACC" DEFAULT OFF
-    CONDITION Serialbox_FOUND OR HDF5_FOUND
-)
+# ecbuild_add_option( FEATURE CLOUDSC_GPU_SCC_HOIST
+#     DESCRIPTION "Build optimized GPU version of CLOUDSC using SCC with hoisted temporary arrays and OpenACC" DEFAULT OFF
+#     CONDITION Serialbox_FOUND OR HDF5_FOUND
+# )
 
-ecbuild_add_option( FEATURE CLOUDSC_GPU_SCC_K_CACHING
-    DESCRIPTION "Build (further) optimized GPU version of CLOUDSC using SCC layout with OpenACC" DEFAULT OFF
-    CONDITION Serialbox_FOUND OR HDF5_FOUND
-)
+# ecbuild_add_option( FEATURE CLOUDSC_GPU_SCC_K_CACHING
+#     DESCRIPTION "Build (further) optimized GPU version of CLOUDSC using SCC layout with OpenACC" DEFAULT OFF
+#     CONDITION Serialbox_FOUND OR HDF5_FOUND
+# )
 
 ecbuild_add_option( FEATURE CLOUDSC_GPU_OMP_SCC_HOIST
     DESCRIPTION "Build optimized GPU version of CLOUDSC using SCC with hoisted temporary arrays and OpenMP offload" DEFAULT OFF
@@ -53,10 +53,10 @@ ecbuild_add_option( FEATURE CLOUDSC_GPU_OMP_SCC_HOIST_DR_LOOP
     CONDITION Serialbox_FOUND OR HDF5_FOUND
 )
 
-ecbuild_add_option( FEATURE CLOUDSC_GPU_SCC_FIELD
-    DESCRIPTION "Build optimized GPU version of CLOUDSC using SCC with FIELD API" DEFAULT ON
-    CONDITION HAVE_FIELD_API AND ( Serialbox_FOUND OR HDF5_FOUND )
-)
+# ecbuild_add_option( FEATURE CLOUDSC_GPU_SCC_FIELD
+#     DESCRIPTION "Build optimized GPU version of CLOUDSC using SCC with FIELD API" DEFAULT ON
+#     CONDITION HAVE_FIELD_API AND ( Serialbox_FOUND OR HDF5_FOUND )
+# )
 
 
 if( HAVE_CLOUDSC_GPU_CLAW )
@@ -173,7 +173,7 @@ if( HAVE_CLOUDSC_GPU_OMP_SCC_HOIST )
             cloudsc-common-lib
         DEFINITIONS ${CLOUDSC_DEFINITIONS} ${CLOUDSC_GPU_OMP_SCC_HOIST_DEFINITIONS}
     )
-    target_link_options(dwarf-cloudsc-gpu-omp-scc-hoist PRIVATE "-hkeepfiles")
+	 target_link_options(dwarf-cloudsc-gpu-omp-scc-hoist PRIVATE "-hkeepfiles")
 
     ecbuild_add_test(
         TARGET dwarf-cloudsc-gpu-omp-scc-hoist-serial

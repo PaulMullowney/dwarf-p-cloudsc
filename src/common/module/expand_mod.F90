@@ -141,7 +141,7 @@ contains
     real(kind=jprb), allocatable :: buffer(:,:,:)
     integer(kind=jpim) :: start, end, size
 
-    integer :: b
+    integer :: b, i
 
     call get_offsets(start, end, size, nlon, ndim, nlev, ngptot, ngptotg)
     if (.not. allocated(state))  allocate(state(nblocks))
@@ -153,10 +153,9 @@ contains
     call load_array(name//'_Q', start, end, size, nlon, nlev, buffer(:,:,3))
     call load_array(name//'_CLD', start, end, size, nlon, nlev, ndim, buffer(:,:,4:))
 
-    call expand(buffer(:,:,1), field(:,:,1,:), size, nproma, nlev, ngptot, nblocks)
-    call expand(buffer(:,:,2), field(:,:,2,:), size, nproma, nlev, ngptot, nblocks)
-    call expand(buffer(:,:,3), field(:,:,3,:), size, nproma, nlev, ngptot, nblocks)
-    call expand(buffer(:,:,4:), field(:,:,4:,:), size, nproma, nlev, ndim, ngptot, nblocks)
+    do i=1, 3+ndim
+       call expand_r2_new(buffer(:,:,i), field, size, nproma, nlev, ndim, ngptot, nblocks, i)
+    end do
     deallocate(buffer)
 
 !$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(B) schedule(runtime)
@@ -174,7 +173,6 @@ contains
     logical, intent(inout) :: buffer(nlon), field(nproma, nblocks)
     integer(kind=jpim), intent(in) :: nlon, nproma, ngptot, nblocks
     integer :: b, gidx, bsize, fidx, fend, bidx, bend
-
 !$omp parallel do default(shared) private(b, gidx, bsize, fidx, fend, bidx, bend) schedule(runtime)
     do b=1, nblocks
        gidx = (b-1)*nproma + 1  ! Global starting index of the block in the general domain
@@ -294,18 +292,51 @@ contains
          fend = fidx + bend - 1
          field(fidx:fend,:,b) = buffer(bidx:bend,:)
        end do
-
        field(bsize+1:nproma,:,b) = 0.0_JPRB
     end do
 !$omp end parallel do
 
   end subroutine expand_r2
 
+  subroutine expand_r2_new(buffer, field, nlon, nproma, nlev, ndim, ngptot, nblocks, index)
+          use omp_lib
+    real(kind=jprb), intent(inout) :: buffer(nlon, nlev)
+    real(kind=jprb), intent(inout) :: field(nproma, nlev, 3+ndim, nblocks)
+    integer(kind=jpim), intent(in) :: nlon, nlev, ndim, nproma, ngptot, nblocks, index
+    integer :: b, gidx, bsize, fidx, fend, bidx, bend
+
+!!$omp parallel do default(shared) private(b, gidx, bsize, fidx, fend, bidx, bend) schedule(runtime)
+    do b=1, nblocks
+       gidx = (b-1)*nproma + 1  ! Global starting index of the block in the general domain
+       bsize = min(nproma, ngptot - gidx + 1)  ! Size of the field block
+
+       ! First read, might not be aligned
+       bidx = mod(gidx-1,nlon)+1
+       bend = min(nlon,bidx+bsize-1)
+       fidx = 1
+       fend = bend - bidx + 1
+       field(fidx:fend,:,index,b) = buffer(bidx:bend,:)
+
+       ! Fill block by looping over buffer
+       do while (fend < bsize)
+         fidx = fend + 1
+         bidx = 1
+         bend = min(bsize - fidx+1, nlon)
+         fend = fidx + bend - 1
+         field(fidx:fend,:,index,b) = buffer(bidx:bend,:)
+       end do
+       field(bsize+1:nproma,:,index,b) = 0.0_JPRB
+    end do
+!!$omp end parallel do
+
+  end subroutine expand_r2_new
+
   subroutine expand_r3(buffer, field, nlon, nproma, nlev, ndim, ngptot, nblocks)
     real(kind=jprb), intent(inout) :: buffer(nlon, nlev, ndim)
     real(kind=jprb), intent(inout) :: field(nproma, nlev, ndim, nblocks)
     integer(kind=jpim), intent(in) :: nlon, nlev, ndim, nproma, ngptot, nblocks
     integer :: b, gidx, bsize, fidx, fend, bidx, bend
+
 !$omp parallel do default(shared) private(b, gidx, bsize, fidx, fend, bidx, bend) schedule(runtime)
     do b=1, nblocks
        gidx = (b-1)*nproma + 1  ! Global starting index of the block in the general domain
