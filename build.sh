@@ -6,10 +6,6 @@ for i in "$@"; do
             ranks="${i#*=}"
             shift # past argument=value
             ;;
-        -rocm=*|--rocm=*)
-            rocm="${i#*=}"
-            shift # past argument=value
-            ;;
         -cce=*|--cce=*)
             cce="${i#*=}"
             shift # past argument=value
@@ -43,36 +39,13 @@ done
 
 module purge
 module load PrgEnv-cray
-export PATH=/home/users/pmullown/software/cmake-3.24.2/bin:$PATH
-which cmake
 
-if [[ $cce == "17.0.1" ]]
-then
-    module load cpe/24.03
-    export ROCM_PATH=/opt/rocm-6.0.2/
-    #module load rocm/${rocm}
-elif [[ $cce == "17.0.0" ]]
-then
-    module load cpe/23.12
-    module load rocm/${rocm}
-elif [[ $cce == "16.0.1" ]]
-then
-    module load cpe/23.09
-	 module load rocm/${rocm}
-elif [[ $cce == "16.0.0" ]]
-then
-    module load cpe/23.05
-    module load rocm/${rocm}
+if [[ $machine == *"lockhart"* ]]; then
+    module load cmake/3.28.3
 else
-    export MODULEPATH=/opt/cray/pe/lmod/modulefiles/mpi/crayclang/14.0/ofi/1.0/cray-mpich/8.0:/opt/cray/pe/lmod/modulefiles/comnet/crayclang/14.0/ofi/1.0:/opt/cray/pe/lmod/modulefiles/compiler/crayclang/14.0:/opt/cray/pe/lmod/modulefiles/mix_compilers:/opt/cray/pe/lmod/modulefiles/perftools/23.05.0:/opt/cray/pe/lmod/modulefiles/net/ofi/1.0:/opt/cray/pe/lmod/modulefiles/cpu/x86-rome/1.0:/opt/cray/pe/modulefiles/Linux:/opt/cray/pe/modulefiles/Core:/opt/cray/pe/lmod/lmod/modulefiles/Core:/opt/cray/pe/lmod/modulefiles/core:/opt/cray/pe/lmod/modulefiles/craype-targets/default:/opt/cray/modulefiles:/opt/cray/pe/lmod/modulefiles/comnet/crayclang/10.0/ofi/1.0/cray-mpich
-    module load cpe/23.03
-    module load amd/5.4.3
-    module load cce/15.0.1
-    export ROCM_PATH=/opt/rocm-5.4.3/
-    export GCC_X86_64=/opt/cray/pe/gcc/12.2.0/snos
+    export PATH=/home/users/pmullown/software/cmake-3.24.2/bin:$PATH
 fi
-module load craype-accel-amd-${arch}
-module list
+which cmake
 
 export LD_LIBRARY_PATH=${CRAY_LD_LIBRARY_PATH}:${LD_LIBRARY_PATH}
 
@@ -84,16 +57,17 @@ then
     else
 	# HIP build requires one to turn off HDF5 and build SerialBox (this requires boost)
 	mkdir ${build_dir}_${cce}
+	PWD=$(pwd)
+	ln -s ${PWD}/arch/${machine}/cray-gpu/${cce}/env.sh ${PWD}/${build_dir}_${cce}/env.sh
+	ln -s ${PWD}/arch/${machine}/cray-gpu/${cce}/toolchain.cmake ${PWD}/${build_dir}_${cce}/toolchain.cmake
 	cd ${build_dir}_${cce}
-	ln -s ../arch/${machine}/cray-gpu/${cce}/env.sh env.sh
-	ln -s ../arch/${machine}/cray-gpu/${cce}/toolchain.cmake toolchain.cmake
 	source env.sh
 	export CC=cc CXX=CC FC=ftn
 	cmake ../source -DCMAKE_C_COMPILER=cc -DCMAKE_CXX_COMPILER=CC -DCMAKE_Fortran_COMPILER=ftn -DCMAKE_BUILD_TYPE=BIT -DCMAKE_INSTALL_PREFIX=../install -DCMAKE_TOOLCHAIN_FILE=toolchain.cmake -DENABLE_CLOUDSC_GPU_OMP_SCC_HOIST=ON -DENABLE_CLOUDSC_GPU_OMP_SCC_HOIST_DR_LOOP=ON -DGPU_TARGETS=${arch} -DOpenMP_C_LIB_NAMES=craymp -DOpenMP_CXX_LIB_NAMES=craymp -DOpenMP_Fortran_LIB_NAMES=craymp -DOpenMP_craymp_LIBRARY=/opt/cray/pe/cce/${cce}/cce/x86_64/lib/libcraymp.so -DOpenMP_C_FLAGS=-fopenmp -DOpenMP_CXX_FLAGS=-fopenmp '-DOpenMP_Fortran_FLAGS=-homp -hlist=aimd' -DBUILD_serialbox=ON -DENABLE_SERIALBOX=ON -DENABLE_HDF5=OFF -DENABLE_CLOUDSC_HIP=ON
 	make VERBOSE=1 -j${ranks}
 	cd ..
-	#-DCMAKE_HIP_ARCHITECTURES=${arch} 
     fi
+
 else
     
     if [[ $use_ecbundle ]];
@@ -102,9 +76,10 @@ else
 	
     else
 	mkdir ${build_dir}_${cce}
+	PWD=$(pwd)
+	ln -s ${PWD}/arch/${machine}/cray-gpu/${cce}/env.sh ${PWD}/${build_dir}_${cce}/env.sh
+	ln -s ${PWD}/arch/${machine}/cray-gpu/${cce}/toolchain.cmake ${PWD}/${build_dir}_${cce}/toolchain.cmake
 	cd ${build_dir}_${cce}
-	ln -s ../arch/${machine}/cray-gpu/${cce}/env.sh env.sh
-	ln -s ../arch/${machine}/cray-gpu/${cce}/toolchain.cmake toolchain.cmake
 	source env.sh
 	export CC=cc CXX=CC FC=ftn
 	cmake ../source -DCMAKE_C_COMPILER=cc -DCMAKE_CXX_COMPILER=CC -DCMAKE_Fortran_COMPILER=ftn -DCMAKE_BUILD_TYPE=BIT -DCMAKE_INSTALL_PREFIX=../install -DCMAKE_TOOLCHAIN_FILE=toolchain.cmake -DENABLE_CLOUDSC_GPU_OMP_SCC_HOIST=ON -DENABLE_CLOUDSC_GPU_OMP_SCC_HOIST_DR_LOOP=ON -DOpenMP_C_LIB_NAMES=craymp -DOpenMP_CXX_LIB_NAMES=craymp -DOpenMP_Fortran_LIB_NAMES=craymp -DOpenMP_craymp_LIBRARY=/opt/cray/pe/cce/${cce}/cce/x86_64/lib/libcraymp.so -DOpenMP_C_FLAGS=-fopenmp -DOpenMP_CXX_FLAGS=-fopenmp '-DOpenMP_Fortran_FLAGS=-homp -hlist=aimd' -DENABLE_CLOUDSC_HIP=OFF

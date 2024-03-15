@@ -21,23 +21,21 @@ module_unload() {
 }
 
 # Unload to be certain
-module reset
+#module reset
 
 # Load modules
 module load PrgEnv-cray
-module load cpe/23.12
-module load amd/5.7.3
-module load cce/17.0.0
-export ROCM_PATH=/opt/rocm-5.7.3/
-#module load rocm/5.5.1
+#module load cpe/23.03
+module load rocm/5.4.3
+module load cce/15.0.1
+export ROCM_PATH=/opt/rocm-5.4.3/
+export GCC_X86_64=/opt/cray/pe/gcc/12.2.0/snos
 module load craype-accel-amd-gfx90a
-#module load cray-hdf5/1.12.2.7
-#module load boost/1.79.0
+module load cray-hdf5/1.12.2.7
+module load boost/1.83.0
 module list
 
 set -x
-export PATH=/home/pmullown/software/bin/:$PATH
-which cmake
 
 export CC=cc CXX=CC FC=ftn
 
