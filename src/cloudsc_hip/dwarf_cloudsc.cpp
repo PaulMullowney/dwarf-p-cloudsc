@@ -16,7 +16,7 @@
 
 int main( int argc, char *argv[] ) {
 
-  int omp_threads, ngptot, nproma;
+  int omp_threads, ngptot, nproma, niter;
   int return_code;
 
   return_code = 0;
@@ -34,6 +34,14 @@ int main( int argc, char *argv[] ) {
     ngptot      = atoi( argv[2] );
     nproma      = atoi( argv[3] );
     cloudsc_driver(omp_threads, ngptot, nproma);
+  }
+  else if (argc == 5) {
+    omp_threads = atoi( argv[1] );
+    ngptot      = atoi( argv[2] );
+    nproma      = atoi( argv[3] );
+    niter      = atoi( argv[4] );
+    for (int i=0; i<niter;++i)
+      cloudsc_driver(omp_threads, ngptot, nproma);
   }
   else {
     printf("Calling c-cloudsc with the right number of arguments will work better ;-) \n");

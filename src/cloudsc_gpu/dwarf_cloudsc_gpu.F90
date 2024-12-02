@@ -92,7 +92,8 @@ LOGICAL :: USE_PACKED
 INTEGER :: ENV_STATUS = 1              ! Status for reading env. variables
 INTEGER(KIND=JPIM) :: NUMOMP   = 1     ! Number of OpenMP threads for this run
 INTEGER(KIND=JPIM) :: NGPTOTG  = 16384 ! Number of grid points (as read from command line)
-INTEGER(KIND=JPIM) :: NPROMA   = 64   ! NPROMA blocking factor (currently active)
+INTEGER(KIND=JPIM) :: NPROMA   = 64    ! NPROMA blocking factor (currently active)
+INTEGER(KIND=JPIM) :: NITERS   = 1     ! Number of iterations to run
 INTEGER(KIND=JPIM) :: NGPTOT           ! Local number of grid points
 INTEGER(KIND=JPIM) :: NQUEUES = 3      ! Number of queues for async F-API variant
 INTEGER(KIND=JPIM) :: BLOCKING_CHUNK_SIZE = 512 ! Default block size for blocked and async F-API variants
@@ -143,6 +144,14 @@ IF (IARGS >= 3) THEN
   CALL GET_COMMAND_ARGUMENT(3, CLARG, LENARG)
   READ(CLARG(1:LENARG),*) NPROMA
 ENDIF
+
+! Get the block number of iterations to run
+IF (IARGS >= 4) THEN
+  CALL GET_COMMAND_ARGUMENT(4, CLARG, LENARG)
+  READ(CLARG(1:LENARG),*) NITERS
+ENDIF
+
+DO I=1,NITERS
 
 #ifdef CLOUDSC_GPU_SCC_FIELD
 CALL GET_ENVIRONMENT_VARIABLE('CLOUDSC_PACKED_STORAGE', PACKED_STORAGE)
@@ -418,6 +427,8 @@ CALL GLOBAL_STATE%VALIDATE(NPROMA, NGPTOT, NGPTOTG)
 #if defined(CLOUDSC_GPU_SCC_FIELD) || defined(CLOUDSC_GPU_SCC_FIELD_BLOCKED) || defined(CLOUDSC_GPU_SCC_FIELD_ASYNC)
 CALL GLOBAL_STATE%FINALIZE()
 #endif
+
+ENDDO
 
 ! Tear down MPI environment
 CALL CLOUDSC_MPI_END()
