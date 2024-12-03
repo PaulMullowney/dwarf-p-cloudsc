@@ -18,7 +18,7 @@ CONTAINS
   & PHRSW, PHRLW, PVERVEL, PAP, PAPH, PLSM, LDCUM, KTYPE, PLU, PLUDE, PSNDE, PMFU, PMFD, PA, PCLV, PSUPSAT, PLCRIT_AER,  &
   & PICRIT_AER, PRE_ICE, PCCN, PNICE, PCOVPTOT, PRAINFRAC_TOPRFZ, PFSQLF, PFSQIF, PFCQNNG, PFCQLNG, PFSQRF, PFSQSF, PFCQRNG,  &
   & PFCQSNG, PFSQLTUR, PFSQITUR, PFPLSL, PFPLSN, PFHPSL, PFHPSN, YRECLDP, ZFOEALFA, ZTP1, ZLI, ZA, ZAORIG, ZLIQFRAC, ZICEFRAC,  &
-  & ZQX, ZQX0, ZPFPLSX, ZLNEG, ZQXN2D, ZQSMIX, ZQSLIQ, ZQSICE, ZFOEEWMT, ZFOEEW, ZFOEELIQT, JL)
+  & ZQX, ZQX0, ZPFPLSX, ZLNEG, ZQXN2D, ZQSMIX, ZQSLIQ, ZQSICE, ZFOEEWMT, ZFOEEW, ZFOEELIQT, ZSOLQA, ZSOLQB, ZQLHS, JL)
     !---input
     !---prognostic fields
     !-- arrays for aerosol-cloud interactions
@@ -407,11 +407,11 @@ CONTAINS
     ! i.e. A positive value is a sink!????? weird...
     !-------------------------------------------------------
 
-    REAL(KIND=JPRB) :: ZSOLQA(NCLV, NCLV)    ! explicit sources and sinks
-    REAL(KIND=JPRB) :: ZSOLQB(NCLV, NCLV)
+    REAL(KIND=JPRB), INTENT(INOUT) :: ZSOLQA(KLON*NCLV*NCLV)    ! explicit sources and sinks
+    REAL(KIND=JPRB), INTENT(INOUT) :: ZSOLQB(KLON*NCLV*NCLV)
     ! implicit sources and sinks
     ! e.g. microphysical pathways between ice variables.
-    REAL(KIND=JPRB) :: ZQLHS(NCLV, NCLV)    ! n x n matrix storing the LHS of implicit solver
+    REAL(KIND=JPRB), INTENT(INOUT) :: ZQLHS(KLON*NCLV*NCLV)    ! n x n matrix storing the LHS of implicit solver
     REAL(KIND=JPRB) :: ZVQX(NCLV)    ! fall speeds of three categories
     REAL(KIND=JPRB) :: ZEXPLICIT, ZRATIO(NCLV), ZSINKSUM(NCLV)
 
@@ -490,10 +490,52 @@ CONTAINS
 
     REAL(KIND=JPRB) :: PSUM_SOLQA
 
+    INTEGER(KIND=JPIM) :: INDEX
+    INTEGER(KIND=JPIM) :: INDEX_RL, INDEX_LR
+    INTEGER(KIND=JPIM) :: INDEX_RV, INDEX_VR
+    INTEGER(KIND=JPIM) :: INDEX_SI, INDEX_IS
+    INTEGER(KIND=JPIM) :: INDEX_SV, INDEX_VS
+    INTEGER(KIND=JPIM) :: INDEX_SL, INDEX_LS
+    INTEGER(KIND=JPIM) :: INDEX_SR, INDEX_RS
+    INTEGER(KIND=JPIM) :: INDEX_VL, INDEX_LV
+    INTEGER(KIND=JPIM) :: INDEX_VI, INDEX_IV
+    INTEGER(KIND=JPIM) :: INDEX_LI, INDEX_IL
+    INTEGER(KIND=JPIM) :: INDEX_LL, INDEX_II, INDEX_SS
 
 #include "fcttre.func.h"
 #include "fccld.func.h"
 !$acc routine seq
+
+    INDEX_VL = JL + (NCLDQV-1)*KLON + (NCLDQL-1)*KLON*NCLV
+    INDEX_LV = JL + (NCLDQL-1)*KLON + (NCLDQV-1)*KLON*NCLV
+
+    INDEX_VR = JL + (NCLDQV-1)*KLON + (NCLDQR-1)*KLON*NCLV
+    INDEX_RV = JL + (NCLDQR-1)*KLON + (NCLDQV-1)*KLON*NCLV
+
+    INDEX_VS = JL + (NCLDQV-1)*KLON + (NCLDQS-1)*KLON*NCLV
+    INDEX_SV = JL + (NCLDQS-1)*KLON + (NCLDQV-1)*KLON*NCLV
+
+    INDEX_VI = JL + (NCLDQV-1)*KLON + (NCLDQI-1)*KLON*NCLV
+    INDEX_IV = JL + (NCLDQI-1)*KLON + (NCLDQV-1)*KLON*NCLV
+
+    INDEX_LI = JL + (NCLDQL-1)*KLON + (NCLDQI-1)*KLON*NCLV
+    INDEX_IL = JL + (NCLDQI-1)*KLON + (NCLDQL-1)*KLON*NCLV
+
+    INDEX_RL = JL + (NCLDQR-1)*KLON + (NCLDQL-1)*KLON*NCLV
+    INDEX_LR = JL + (NCLDQL-1)*KLON + (NCLDQR-1)*KLON*NCLV
+
+    INDEX_SL = JL + (NCLDQS-1)*KLON + (NCLDQL-1)*KLON*NCLV
+    INDEX_LS = JL + (NCLDQL-1)*KLON + (NCLDQS-1)*KLON*NCLV
+
+    INDEX_SI = JL + (NCLDQS-1)*KLON + (NCLDQI-1)*KLON*NCLV
+    INDEX_IS = JL + (NCLDQI-1)*KLON + (NCLDQS-1)*KLON*NCLV
+
+    INDEX_SR = JL + (NCLDQS-1)*KLON + (NCLDQR-1)*KLON*NCLV
+    INDEX_RS = JL + (NCLDQR-1)*KLON + (NCLDQS-1)*KLON*NCLV
+
+    INDEX_LL = JL + (NCLDQL-1)*KLON + (NCLDQL-1)*KLON*NCLV
+    INDEX_II = JL + (NCLDQI-1)*KLON + (NCLDQI-1)*KLON*NCLV
+    INDEX_SS = JL + (NCLDQS-1)*KLON + (NCLDQS-1)*KLON*NCLV
 
 
     !===============================================================================
@@ -863,8 +905,8 @@ CONTAINS
       !------------------------------------------
       DO JM=1,NCLV
         DO JN=1,NCLV
-          ZSOLQB(JN, JM) = 0.0_JPRB
-          ZSOLQA(JN, JM) = 0.0_JPRB
+          ZSOLQB(JL + (JN-1)*KLON + (JM-1)*KLON*NCLV) = 0.0_JPRB
+          ZSOLQA(JL + (JN-1)*KLON + (JM-1)*KLON*NCLV) = 0.0_JPRB
         END DO
       END DO
 
@@ -938,13 +980,13 @@ CONTAINS
       !------------------------------------------------
 
       IF (ZQX(JL, JK, NCLDQL) < YRECLDP%RLMIN) THEN
-        ZSOLQA(NCLDQV, NCLDQL) = ZQX(JL, JK, NCLDQL)
-        ZSOLQA(NCLDQL, NCLDQV) = -ZQX(JL, JK, NCLDQL)
+        ZSOLQA(INDEX_VL) = ZQX(JL, JK, NCLDQL)
+        ZSOLQA(INDEX_LV) = -ZQX(JL, JK, NCLDQL)
       END IF
 
       IF (ZQX(JL, JK, NCLDQI) < YRECLDP%RLMIN) THEN
-        ZSOLQA(NCLDQV, NCLDQI) = ZQX(JL, JK, NCLDQI)
-        ZSOLQA(NCLDQI, NCLDQV) = -ZQX(JL, JK, NCLDQI)
+        ZSOLQA(INDEX_VI) = ZQX(JL, JK, NCLDQI)
+        ZSOLQA(INDEX_IV) = -ZQX(JL, JK, NCLDQI)
       END IF
 
 
@@ -1003,14 +1045,14 @@ CONTAINS
 
         IF (ZTP1(JL, JK) > YRECLDP%RTHOMO) THEN
           ! Turn supersaturation into liquid water
-          ZSOLQA(NCLDQL, NCLDQV) = ZSOLQA(NCLDQL, NCLDQV) + ZSUPSAT
-          ZSOLQA(NCLDQV, NCLDQL) = ZSOLQA(NCLDQV, NCLDQL) - ZSUPSAT
+          ZSOLQA(INDEX_LV) = ZSOLQA(INDEX_LV) + ZSUPSAT
+          ZSOLQA(INDEX_VL) = ZSOLQA(INDEX_VL) - ZSUPSAT
           ! Include liquid in first guess
           ZQXFG(NCLDQL) = ZQXFG(NCLDQL) + ZSUPSAT
         ELSE
           ! Turn supersaturation into ice water
-          ZSOLQA(NCLDQI, NCLDQV) = ZSOLQA(NCLDQI, NCLDQV) + ZSUPSAT
-          ZSOLQA(NCLDQV, NCLDQI) = ZSOLQA(NCLDQV, NCLDQI) - ZSUPSAT
+          ZSOLQA(INDEX_IV) = ZSOLQA(INDEX_IV) + ZSUPSAT
+          ZSOLQA(INDEX_VI) = ZSOLQA(INDEX_VI) - ZSUPSAT
           ! Add ice to first guess for deposition term
           ZQXFG(NCLDQI) = ZQXFG(NCLDQI) + ZSUPSAT
         END IF
@@ -1027,14 +1069,14 @@ CONTAINS
       IF (PSUPSAT(JL, JK) > ZEPSEC) THEN
         IF (ZTP1(JL, JK) > YRECLDP%RTHOMO) THEN
           ! Turn supersaturation into liquid water
-          ZSOLQA(NCLDQL, NCLDQL) = ZSOLQA(NCLDQL, NCLDQL) + PSUPSAT(JL, JK)
+          ZSOLQA(INDEX_LL) = ZSOLQA(INDEX_LL) + PSUPSAT(JL, JK)
           ZPSUPSATSRCE(NCLDQL) = PSUPSAT(JL, JK)
           ! Add liquid to first guess for deposition term
           ZQXFG(NCLDQL) = ZQXFG(NCLDQL) + PSUPSAT(JL, JK)
           ! Store cloud budget diagnostics if required
         ELSE
           ! Turn supersaturation into ice water
-          ZSOLQA(NCLDQI, NCLDQI) = ZSOLQA(NCLDQI, NCLDQI) + PSUPSAT(JL, JK)
+          ZSOLQA(INDEX_II) = ZSOLQA(INDEX_II) + PSUPSAT(JL, JK)
           ZPSUPSATSRCE(NCLDQI) = PSUPSAT(JL, JK)
           ! Add ice to first guess for deposition term
           ZQXFG(NCLDQI) = ZQXFG(NCLDQI) + PSUPSAT(JL, JK)
@@ -1071,8 +1113,8 @@ CONTAINS
           ZALFAW = ZFOEALFA(JL, JK)
           ZCONVSRCE(NCLDQL) = ZALFAW*PLUDE(JL, JK)
           ZCONVSRCE(NCLDQI) = (1.0_JPRB - ZALFAW)*PLUDE(JL, JK)
-          ZSOLQA(NCLDQL, NCLDQL) = ZSOLQA(NCLDQL, NCLDQL) + ZCONVSRCE(NCLDQL)
-          ZSOLQA(NCLDQI, NCLDQI) = ZSOLQA(NCLDQI, NCLDQI) + ZCONVSRCE(NCLDQI)
+          ZSOLQA(INDEX_LL) = ZSOLQA(INDEX_LL) + ZCONVSRCE(NCLDQL)
+          ZSOLQA(INDEX_II) = ZSOLQA(INDEX_II) + ZCONVSRCE(NCLDQI)
 
         ELSE
 
@@ -1080,7 +1122,7 @@ CONTAINS
 
         END IF
         ! *convective snow detrainment source
-        IF (LDCUM(JL))         ZSOLQA(NCLDQS, NCLDQS) = ZSOLQA(NCLDQS, NCLDQS) + PSNDE(JL, JK)*ZDTGDP
+        IF (LDCUM(JL))         ZSOLQA(INDEX_SS) = ZSOLQA(INDEX_SS) + PSNDE(JL, JK)*ZDTGDP
 
 
       END IF
@@ -1131,9 +1173,9 @@ CONTAINS
             ZLFINAL = ZLCUST(JM) - ZEVAP
             ZLFINALSUM = ZLFINALSUM + ZLFINAL              ! sum
 
-            ZSOLQA(JM, JM) = ZSOLQA(JM, JM) + ZLCUST(JM)              ! whole sum
-            ZSOLQA(NCLDQV, JM) = ZSOLQA(NCLDQV, JM) + ZEVAP
-            ZSOLQA(JM, NCLDQV) = ZSOLQA(JM, NCLDQV) - ZEVAP
+            ZSOLQA(JL + (JM-1)*KLON + (JM-1)*KLON*NCLV) = ZSOLQA(JL + (JM-1)*KLON + (JM-1)*KLON*NCLV) + ZLCUST(JM)              ! whole sum
+            ZSOLQA(JL + (NCLDQV-1)*KLON + (JM-1)*KLON*NCLV) = ZSOLQA(JL + (NCLDQV-1)*KLON + (JM-1)*KLON*NCLV) + ZEVAP
+            ZSOLQA(JL + (JM-1)*KLON + (NCLDQV-1)*KLON*NCLV) = ZSOLQA(JL + (JM-1)*KLON + (NCLDQV-1)*KLON*NCLV) - ZEVAP
           END IF
         END DO
 
@@ -1155,8 +1197,8 @@ CONTAINS
         ZMFDN = MAX(0.0_JPRB, (PMFU(JL, JK + 1) + PMFD(JL, JK + 1))*ZDTGDP)
 
         ZSOLAB = ZSOLAB + ZMFDN
-        ZSOLQB(NCLDQL, NCLDQL) = ZSOLQB(NCLDQL, NCLDQL) + ZMFDN
-        ZSOLQB(NCLDQI, NCLDQI) = ZSOLQB(NCLDQI, NCLDQI) + ZMFDN
+        ZSOLQB(INDEX_LL) = ZSOLQB(INDEX_LL) + ZMFDN
+        ZSOLQB(INDEX_II) = ZSOLQB(INDEX_II) + ZMFDN
 
         ! Record sink for cloud budget and enthalpy budget diagnostics
         ZCONVSINK(NCLDQL) = ZMFDN
@@ -1197,10 +1239,10 @@ CONTAINS
         ! Erosion is -ve LINEAR in L,A
         ZSOLAC = ZSOLAC - ZAEROS          !linear
 
-        ZSOLQA(NCLDQV, NCLDQL) = ZSOLQA(NCLDQV, NCLDQL) + ZLIQFRAC(JL, JK)*ZLEROS
-        ZSOLQA(NCLDQL, NCLDQV) = ZSOLQA(NCLDQL, NCLDQV) - ZLIQFRAC(JL, JK)*ZLEROS
-        ZSOLQA(NCLDQV, NCLDQI) = ZSOLQA(NCLDQV, NCLDQI) + ZICEFRAC(JL, JK)*ZLEROS
-        ZSOLQA(NCLDQI, NCLDQV) = ZSOLQA(NCLDQI, NCLDQV) - ZICEFRAC(JL, JK)*ZLEROS
+        ZSOLQA(INDEX_VL) = ZSOLQA(INDEX_VL) + ZLIQFRAC(JL, JK)*ZLEROS
+        ZSOLQA(INDEX_LV) = ZSOLQA(INDEX_LV) - ZLIQFRAC(JL, JK)*ZLEROS
+        ZSOLQA(INDEX_VI) = ZSOLQA(INDEX_VI) + ZICEFRAC(JL, JK)*ZLEROS
+        ZSOLQA(INDEX_IV) = ZSOLQA(INDEX_IV) - ZICEFRAC(JL, JK)*ZLEROS
 
       END IF
 
@@ -1281,11 +1323,11 @@ CONTAINS
         ZLEVAPL = ZLIQFRAC(JL, JK)*ZLEVAP
         ZLEVAPI = ZICEFRAC(JL, JK)*ZLEVAP
 
-        ZSOLQA(NCLDQV, NCLDQL) = ZSOLQA(NCLDQV, NCLDQL) + ZLIQFRAC(JL, JK)*ZLEVAP
-        ZSOLQA(NCLDQL, NCLDQV) = ZSOLQA(NCLDQL, NCLDQV) - ZLIQFRAC(JL, JK)*ZLEVAP
+        ZSOLQA(INDEX_VL) = ZSOLQA(INDEX_VL) + ZLIQFRAC(JL, JK)*ZLEVAP
+        ZSOLQA(INDEX_LV) = ZSOLQA(INDEX_LV) - ZLIQFRAC(JL, JK)*ZLEVAP
 
-        ZSOLQA(NCLDQV, NCLDQI) = ZSOLQA(NCLDQV, NCLDQI) + ZICEFRAC(JL, JK)*ZLEVAP
-        ZSOLQA(NCLDQI, NCLDQV) = ZSOLQA(NCLDQI, NCLDQV) - ZICEFRAC(JL, JK)*ZLEVAP
+        ZSOLQA(INDEX_VI) = ZSOLQA(INDEX_VI) + ZICEFRAC(JL, JK)*ZLEVAP
+        ZSOLQA(INDEX_IV) = ZSOLQA(INDEX_IV) - ZICEFRAC(JL, JK)*ZLEVAP
 
       END IF
 
@@ -1317,12 +1359,12 @@ CONTAINS
         ! remains at cold temperatures until next timestep.
         !-------------------------------------------------------------------------
         IF (ZTP1(JL, JK) > YRECLDP%RTHOMO) THEN
-          ZSOLQA(NCLDQL, NCLDQV) = ZSOLQA(NCLDQL, NCLDQV) + ZLCOND1
-          ZSOLQA(NCLDQV, NCLDQL) = ZSOLQA(NCLDQV, NCLDQL) - ZLCOND1
+          ZSOLQA(INDEX_LV) = ZSOLQA(INDEX_LV) + ZLCOND1
+          ZSOLQA(INDEX_VL) = ZSOLQA(INDEX_VL) - ZLCOND1
           ZQXFG(NCLDQL) = ZQXFG(NCLDQL) + ZLCOND1
         ELSE
-          ZSOLQA(NCLDQI, NCLDQV) = ZSOLQA(NCLDQI, NCLDQV) + ZLCOND1
-          ZSOLQA(NCLDQV, NCLDQI) = ZSOLQA(NCLDQV, NCLDQI) - ZLCOND1
+          ZSOLQA(INDEX_IV) = ZSOLQA(INDEX_IV) + ZLCOND1
+          ZSOLQA(INDEX_VI) = ZSOLQA(INDEX_VI) - ZLCOND1
           ZQXFG(NCLDQI) = ZQXFG(NCLDQI) + ZLCOND1
         END IF
       END IF
@@ -1412,13 +1454,13 @@ CONTAINS
           ! remains at cold temperatures until next timestep.
           !------------------------------------------------------------------------
           IF (ZTP1(JL, JK) > YRECLDP%RTHOMO) THEN
-            ZSOLQA(NCLDQL, NCLDQV) = ZSOLQA(NCLDQL, NCLDQV) + ZLCOND2
-            ZSOLQA(NCLDQV, NCLDQL) = ZSOLQA(NCLDQV, NCLDQL) - ZLCOND2
+            ZSOLQA(INDEX_LV) = ZSOLQA(INDEX_LV) + ZLCOND2
+            ZSOLQA(INDEX_VL) = ZSOLQA(INDEX_VL) - ZLCOND2
             ZQXFG(NCLDQL) = ZQXFG(NCLDQL) + ZLCOND2
           ELSE
             ! homogeneous freezing
-            ZSOLQA(NCLDQI, NCLDQV) = ZSOLQA(NCLDQI, NCLDQV) + ZLCOND2
-            ZSOLQA(NCLDQV, NCLDQI) = ZSOLQA(NCLDQV, NCLDQI) - ZLCOND2
+            ZSOLQA(INDEX_IV) = ZSOLQA(INDEX_IV) + ZLCOND2
+            ZSOLQA(INDEX_VI) = ZSOLQA(INDEX_VI) - ZLCOND2
             ZQXFG(NCLDQI) = ZQXFG(NCLDQI) + ZLCOND2
           END IF
 
@@ -1518,8 +1560,8 @@ CONTAINS
           !--------------
           ! add to matrix
           !--------------
-          ZSOLQA(NCLDQI, NCLDQL) = ZSOLQA(NCLDQI, NCLDQL) + ZDEPOS
-          ZSOLQA(NCLDQL, NCLDQI) = ZSOLQA(NCLDQL, NCLDQI) - ZDEPOS
+          ZSOLQA(INDEX_IL) = ZSOLQA(INDEX_IL) + ZDEPOS
+          ZSOLQA(INDEX_LI) = ZSOLQA(INDEX_LI) - ZDEPOS
           ZQXFG(NCLDQI) = ZQXFG(NCLDQI) + ZDEPOS
           ZQXFG(NCLDQL) = ZQXFG(NCLDQL) - ZDEPOS
 
@@ -1604,8 +1646,8 @@ CONTAINS
           !--------------
           ! add to matrix
           !--------------
-          ZSOLQA(NCLDQI, NCLDQL) = ZSOLQA(NCLDQI, NCLDQL) + ZDEPOS
-          ZSOLQA(NCLDQL, NCLDQI) = ZSOLQA(NCLDQL, NCLDQI) - ZDEPOS
+          ZSOLQA(INDEX_IL) = ZSOLQA(INDEX_IL) + ZDEPOS
+          ZSOLQA(INDEX_LI) = ZSOLQA(INDEX_LI) - ZDEPOS
           ZQXFG(NCLDQI) = ZQXFG(NCLDQI) + ZDEPOS
           ZQXFG(NCLDQL) = ZQXFG(NCLDQL) - ZDEPOS
         END IF
@@ -1639,7 +1681,7 @@ CONTAINS
           !------------------------
           IF (JK > YRECLDP%NCLDTOP) THEN
             ZFALLSRCE(JM) = ZPFPLSX(JL, JK, JM)*ZDTGDP
-            ZSOLQA(JM, JM) = ZSOLQA(JM, JM) + ZFALLSRCE(JM)
+            ZSOLQA(JL + (JM-1)*KLON + (JM-1)*KLON*NCLV) = ZSOLQA(JL + (JM-1)*KLON + (JM-1)*KLON*NCLV) + ZFALLSRCE(JM)
             ZQXFG(JM) = ZQXFG(JM) + ZFALLSRCE(JM)
             ! use first guess precip----------V
             ZQPRETOT = ZQPRETOT + ZQXFG(JM)
@@ -1723,7 +1765,7 @@ CONTAINS
           END IF
 
           ZSNOWAUT = ZZCO*(1.0_JPRB - EXP(-(ZICECLD / ZLCRIT)**2))
-          ZSOLQB(NCLDQS, NCLDQI) = ZSOLQB(NCLDQS, NCLDQI) + ZSNOWAUT
+          ZSOLQB(INDEX_SI) = ZSOLQB(INDEX_SI) + ZSNOWAUT
 
         END IF
       END IF
@@ -1787,9 +1829,9 @@ CONTAINS
 
           ! rain freezes instantly
           IF (ZTP1(JL, JK) <= RTT) THEN
-            ZSOLQB(NCLDQS, NCLDQL) = ZSOLQB(NCLDQS, NCLDQL) + ZRAINAUT
+            ZSOLQB(INDEX_SL) = ZSOLQB(INDEX_SL) + ZRAINAUT
           ELSE
-            ZSOLQB(NCLDQR, NCLDQL) = ZSOLQB(NCLDQR, NCLDQL) + ZRAINAUT
+            ZSOLQB(INDEX_RL) = ZSOLQB(INDEX_RL) + ZRAINAUT
           END IF
 
           !--------------------------------------------------------
@@ -1829,15 +1871,15 @@ CONTAINS
           ! If temperature < 0, then autoconversion produces snow rather than rain
           ! Explicit
           IF (ZTP1(JL, JK) <= RTT) THEN
-            ZSOLQA(NCLDQS, NCLDQL) = ZSOLQA(NCLDQS, NCLDQL) + ZRAINAUT
-            ZSOLQA(NCLDQS, NCLDQL) = ZSOLQA(NCLDQS, NCLDQL) + ZRAINACC
-            ZSOLQA(NCLDQL, NCLDQS) = ZSOLQA(NCLDQL, NCLDQS) - ZRAINAUT
-            ZSOLQA(NCLDQL, NCLDQS) = ZSOLQA(NCLDQL, NCLDQS) - ZRAINACC
+            ZSOLQA(INDEX_SL) = ZSOLQA(INDEX_SL) + ZRAINAUT
+            ZSOLQA(INDEX_SL) = ZSOLQA(INDEX_SL) + ZRAINACC
+            ZSOLQA(INDEX_LS) = ZSOLQA(INDEX_LS) - ZRAINAUT
+            ZSOLQA(INDEX_LS) = ZSOLQA(INDEX_LS) - ZRAINACC
           ELSE
-            ZSOLQA(NCLDQR, NCLDQL) = ZSOLQA(NCLDQR, NCLDQL) + ZRAINAUT
-            ZSOLQA(NCLDQR, NCLDQL) = ZSOLQA(NCLDQR, NCLDQL) + ZRAINACC
-            ZSOLQA(NCLDQL, NCLDQR) = ZSOLQA(NCLDQL, NCLDQR) - ZRAINAUT
-            ZSOLQA(NCLDQL, NCLDQR) = ZSOLQA(NCLDQL, NCLDQR) - ZRAINACC
+            ZSOLQA(INDEX_RL) = ZSOLQA(INDEX_RL) + ZRAINAUT
+            ZSOLQA(INDEX_RL) = ZSOLQA(INDEX_RL) + ZRAINACC
+            ZSOLQA(INDEX_LR) = ZSOLQA(INDEX_LR) - ZRAINAUT
+            ZSOLQA(INDEX_LR) = ZSOLQA(INDEX_LR) - ZRAINACC
           END IF
 
         END IF
@@ -1872,7 +1914,7 @@ CONTAINS
             ! Limit snow riming term
             ZSNOWRIME = MIN(ZSNOWRIME, 1.0_JPRB)
 
-            ZSOLQB(NCLDQS, NCLDQL) = ZSOLQB(NCLDQS, NCLDQL) + ZSNOWRIME
+            ZSOLQB(INDEX_SL) = ZSOLQB(INDEX_SL) + ZSNOWRIME
 
           END IF
 
@@ -1941,8 +1983,8 @@ CONTAINS
             ! since is not conserved here if ice falls and liquid doesn't
             ZQXFG(JM) = ZQXFG(JM) - ZMELT
             ZQXFG(JN) = ZQXFG(JN) + ZMELT
-            ZSOLQA(JN, JM) = ZSOLQA(JN, JM) + ZMELT
-            ZSOLQA(JM, JN) = ZSOLQA(JM, JN) - ZMELT
+            ZSOLQA(JL + (JN-1)*KLON + (JM-1)*KLON*NCLV) = ZSOLQA(JL + (JN-1)*KLON + (JM-1)*KLON*NCLV) + ZMELT
+            ZSOLQA(JL + (JM-1)*KLON + (JN-1)*KLON*NCLV) = ZSOLQA(JL + (JM-1)*KLON + (JN-1)*KLON*NCLV) - ZMELT
           END IF
         END IF
       END DO
@@ -1996,8 +2038,8 @@ CONTAINS
 
           IF (ZFRZMAX > ZEPSEC) THEN
             ZFRZ = MIN(ZQX(JL, JK, NCLDQR), ZFRZMAX)
-            ZSOLQA(NCLDQS, NCLDQR) = ZSOLQA(NCLDQS, NCLDQR) + ZFRZ
-            ZSOLQA(NCLDQR, NCLDQS) = ZSOLQA(NCLDQR, NCLDQS) - ZFRZ
+            ZSOLQA(INDEX_SR) = ZSOLQA(INDEX_SR) + ZFRZ
+            ZSOLQA(INDEX_RS) = ZSOLQA(INDEX_RS) - ZFRZ
           END IF
         END IF
 
@@ -2014,8 +2056,8 @@ CONTAINS
       JN = IMELT(JM)
       IF (ZFRZMAX > ZEPSEC .and. ZQXFG(JM) > ZEPSEC) THEN
         ZFRZ = MIN(ZQXFG(JM), ZFRZMAX)
-        ZSOLQA(JN, JM) = ZSOLQA(JN, JM) + ZFRZ
-        ZSOLQA(JM, JN) = ZSOLQA(JM, JN) - ZFRZ
+        ZSOLQA(JL + (JN-1)*KLON + (JM-1)*KLON*NCLV) = ZSOLQA(JL + (JN-1)*KLON + (JM-1)*KLON*NCLV) + ZFRZ
+        ZSOLQA(JL + (JM-1)*KLON + (JN-1)*KLON*NCLV) = ZSOLQA(JL + (JM-1)*KLON + (JN-1)*KLON*NCLV) - ZFRZ
       END IF
 
       !----------------------------------------------------------------------
@@ -2066,8 +2108,8 @@ CONTAINS
           ! Evaporate rain
           ZEVAP = MIN(ZDPEVAP, ZQXFG(NCLDQR))
 
-          ZSOLQA(NCLDQV, NCLDQR) = ZSOLQA(NCLDQV, NCLDQR) + ZEVAP
-          ZSOLQA(NCLDQR, NCLDQV) = ZSOLQA(NCLDQR, NCLDQV) - ZEVAP
+          ZSOLQA(INDEX_VR) = ZSOLQA(INDEX_VR) + ZEVAP
+          ZSOLQA(INDEX_RV) = ZSOLQA(INDEX_RV) - ZEVAP
 
           !-------------------------------------------------------------
           ! Reduce the total precip coverage proportional to evaporation
@@ -2155,8 +2197,8 @@ CONTAINS
           ! Limit rain evaporation
           ZEVAP = MIN(ZDPEVAP, ZQXFG(NCLDQR))
 
-          ZSOLQA(NCLDQV, NCLDQR) = ZSOLQA(NCLDQV, NCLDQR) + ZEVAP
-          ZSOLQA(NCLDQR, NCLDQV) = ZSOLQA(NCLDQR, NCLDQV) - ZEVAP
+          ZSOLQA(INDEX_VR) = ZSOLQA(INDEX_VR) + ZEVAP
+          ZSOLQA(INDEX_RV) = ZSOLQA(INDEX_RV) - ZEVAP
 
           !-------------------------------------------------------------
           ! Reduce the total precip coverage proportional to evaporation
@@ -2215,8 +2257,8 @@ CONTAINS
           ! Evaporate snow
           ZEVAP = MIN(ZDPEVAP, ZQXFG(NCLDQS))
 
-          ZSOLQA(NCLDQV, NCLDQS) = ZSOLQA(NCLDQV, NCLDQS) + ZEVAP
-          ZSOLQA(NCLDQS, NCLDQV) = ZSOLQA(NCLDQS, NCLDQV) - ZEVAP
+          ZSOLQA(INDEX_VS) = ZSOLQA(INDEX_VS) + ZEVAP
+          ZSOLQA(INDEX_SV) = ZSOLQA(INDEX_SV) - ZEVAP
 
           !-------------------------------------------------------------
           ! Reduce the total precip coverage proportional to evaporation
@@ -2280,8 +2322,8 @@ CONTAINS
           ZEVAP = MIN(ZEVAP, ZQX(JL, JK, NCLDQS))
 
 
-          ZSOLQA(NCLDQV, NCLDQS) = ZSOLQA(NCLDQV, NCLDQS) + ZEVAP
-          ZSOLQA(NCLDQS, NCLDQV) = ZSOLQA(NCLDQS, NCLDQV) - ZEVAP
+          ZSOLQA(INDEX_VS) = ZSOLQA(INDEX_VS) + ZEVAP
+          ZSOLQA(INDEX_SV) = ZSOLQA(INDEX_SV) - ZEVAP
 
           !-------------------------------------------------------------
           ! Reduce the total precip coverage proportional to evaporation
@@ -2304,8 +2346,8 @@ CONTAINS
       DO JM=1,NCLV
         IF (LLFALL(JM)) THEN
           IF (ZQXFG(JM) < YRECLDP%RLMIN) THEN
-            ZSOLQA(NCLDQV, JM) = ZSOLQA(NCLDQV, JM) + ZQXFG(JM)
-            ZSOLQA(JM, NCLDQV) = ZSOLQA(JM, NCLDQV) - ZQXFG(JM)
+            ZSOLQA(JL + (NCLDQV-1)*KLON + (JM-1)*KLON*NCLV) = ZSOLQA(JL + (NCLDQV-1)*KLON + (JM-1)*KLON*NCLV) + ZQXFG(JM)
+            ZSOLQA(JL + (JM-1)*KLON + (NCLDQV-1)*KLON*NCLV) = ZSOLQA(JL + (JM-1)*KLON + (NCLDQV-1)*KLON*NCLV) - ZQXFG(JM)
           END IF
         END IF
       END DO
@@ -2351,7 +2393,7 @@ CONTAINS
       !----------------------------
       DO JM=1,NCLV
         DO JN=1,NCLV
-          ZSINKSUM(JM) = ZSINKSUM(JM) - ZSOLQA(JM, JN)            ! +ve total is bad
+          ZSINKSUM(JM) = ZSINKSUM(JM) - ZSOLQA(JL + (JM-1)*KLON + (JN-1)*KLON*NCLV)            ! +ve total is bad
         END DO
       END DO
 
@@ -2378,7 +2420,7 @@ CONTAINS
       DO JM=1,NCLV
         PSUM_SOLQA = 0.0
         DO JN=1,NCLV
-          PSUM_SOLQA = PSUM_SOLQA + ZSOLQA(JM, JN)
+          PSUM_SOLQA = PSUM_SOLQA + ZSOLQA(JL + (JM-1)*KLON + (JN-1)*KLON*NCLV)
         END DO
         ! ZSINKSUM(JL,JM)=ZSINKSUM(JL,JM)-SUM(ZSOLQA(JL,JM,1:NCLV))
         ZSINKSUM(JM) = ZSINKSUM(JM) - PSUM_SOLQA
@@ -2395,9 +2437,9 @@ CONTAINS
         !DIR$ IVDEP
         !DIR$ PREFERVECTOR
         DO JN=1,NCLV
-          IF (ZSOLQA(JM, JN) < 0.0_JPRB) THEN
-            ZSOLQA(JM, JN) = ZSOLQA(JM, JN)*ZZRATIO
-            ZSOLQA(JN, JM) = ZSOLQA(JN, JM)*ZZRATIO
+          IF (ZSOLQA(JL + (JM-1)*KLON + (JN-1)*KLON*NCLV) < 0.0_JPRB) THEN
+            ZSOLQA(JL + (JM-1)*KLON + (JN-1)*KLON*NCLV) = ZSOLQA(JL + (JM-1)*KLON + (JN-1)*KLON*NCLV)*ZZRATIO
+            ZSOLQA(JL + (JN-1)*KLON + (JM-1)*KLON*NCLV) = ZSOLQA(JL + (JN-1)*KLON + (JM-1)*KLON*NCLV)*ZZRATIO
           END IF
         END DO
       END DO
@@ -2415,15 +2457,15 @@ CONTAINS
           ! diagonals: microphysical sink terms+transport
           !----------------------------------------------
           IF (JN == JM) THEN
-            ZQLHS(JN, JM) = 1.0_JPRB + ZFALLSINK(JM)
+            ZQLHS(JL + (JN-1)*KLON + (JM-1)*KLON*NCLV) = 1.0_JPRB + ZFALLSINK(JM)
             DO JO=1,NCLV
-              ZQLHS(JN, JM) = ZQLHS(JN, JM) + ZSOLQB(JO, JN)
+              ZQLHS(JL + (JN-1)*KLON + (JM-1)*KLON*NCLV) = ZQLHS(JL + (JN-1)*KLON + (JM-1)*KLON*NCLV) + ZSOLQB(JL + (JO-1)*KLON + (JN-1)*KLON*NCLV)
             END DO
             !------------------------------------------
             ! non-diagonals: microphysical source terms
             !------------------------------------------
           ELSE
-            ZQLHS(JN, JM) = -ZSOLQB(JN, JM)              ! here is the delta T - missing from doc.
+            ZQLHS(JL + (JN-1)*KLON + (JM-1)*KLON*NCLV) = -ZSOLQB(JL + (JN-1)*KLON + (JM-1)*KLON*NCLV)              ! here is the delta T - missing from doc.
           END IF
         END DO
       END DO
@@ -2437,7 +2479,7 @@ CONTAINS
         !---------------------------------
         ZEXPLICIT = 0.0_JPRB
         DO JN=1,NCLV
-          ZEXPLICIT = ZEXPLICIT + ZSOLQA(JM, JN)            ! sum over middle index
+          ZEXPLICIT = ZEXPLICIT + ZSOLQA(JL + (JM-1)*KLON + (JN-1)*KLON*NCLV)            ! sum over middle index
         END DO
         ZQXN(JM) = ZQX(JL, JK, JM) + ZEXPLICIT
       END DO
@@ -2458,10 +2500,10 @@ CONTAINS
         ! number of steps
         DO JM=JN + 1,NCLV
           ! row index
-          ZQLHS(JM, JN) = ZQLHS(JM, JN) / ZQLHS(JN, JN)
+          ZQLHS(JL + (JM-1)*KLON + (JN-1)*KLON*NCLV) = ZQLHS(JL + (JM-1)*KLON + (JN-1)*KLON*NCLV) / ZQLHS(JL + (JN-1)*KLON + (JN-1)*KLON*NCLV)
           DO IK=JN + 1,NCLV
             ! column index
-            ZQLHS(JM, IK) = ZQLHS(JM, IK) - ZQLHS(JM, JN)*ZQLHS(JN, IK)
+            ZQLHS(JL + (JM-1)*KLON + (IK-1)*KLON*NCLV) = ZQLHS(JL + (JM-1)*KLON + (IK-1)*KLON*NCLV) - ZQLHS(JL + (JM-1)*KLON + (JN-1)*KLON*NCLV)*ZQLHS(JL + (JN-1)*KLON + (IK-1)*KLON*NCLV)
           END DO
         END DO
       END DO
@@ -2470,16 +2512,16 @@ CONTAINS
       !  step 1
       DO JN=2,NCLV
         DO JM=1,JN - 1
-          ZQXN(JN) = ZQXN(JN) - ZQLHS(JN, JM)*ZQXN(JM)
+          ZQXN(JN) = ZQXN(JN) - ZQLHS(JL + (JN-1)*KLON + (JM-1)*KLON*NCLV)*ZQXN(JM)
         END DO
       END DO
       !  step 2
-      ZQXN(NCLV) = ZQXN(NCLV) / ZQLHS(NCLV, NCLV)
+      ZQXN(NCLV) = ZQXN(NCLV) / ZQLHS(JL + (NCLV-1)*KLON + (NCLV-1)*KLON*NCLV)
       DO JN=NCLV - 1,1,-1
         DO JM=JN + 1,NCLV
-          ZQXN(JN) = ZQXN(JN) - ZQLHS(JN, JM)*ZQXN(JM)
+          ZQXN(JN) = ZQXN(JN) - ZQLHS(JL + (JN-1)*KLON + (JM-1)*KLON*NCLV)*ZQXN(JM)
         END DO
-        ZQXN(JN) = ZQXN(JN) / ZQLHS(JN, JN)
+        ZQXN(JN) = ZQXN(JN) / ZQLHS(JL + (JN-1)*KLON + (JN-1)*KLON*NCLV)
       END DO
 
       ! Ensure no small values (including negatives) remain in cloud variables nor
