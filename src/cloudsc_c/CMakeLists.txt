@@ -36,6 +36,7 @@ ecbuild_add_library(
         $<${HAVE_HDF5}:hdf5::hdf5>
         $<${HAVE_SERIALBOX}:Serialbox::Serialbox_C>
         $<${HAVE_OMP}:OpenMP::OpenMP_C>
+	m
     DEFINITIONS
         ${CLOUDSC_DEFINITIONS}
 )
