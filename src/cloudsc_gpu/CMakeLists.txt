@@ -150,7 +150,14 @@ if( HAVE_OMP AND HAVE_OMP_TARGET )
             LIBS        OpenMP::OpenMP_Fortran
             TEST_ENV    ${test_env}
         )
-
+	#cloudsc_add_compile_options(
+	#    SOURCES	
+        #    cloudsc_driver_gpu_omp_scc_hoist_mod.F90
+	#    cloudsc_gpu_omp_scc_hoist_mod.F90
+        #    FLAGS
+        #    "--save-temps"
+	#)
+	target_compile_options(dwarf-cloudsc-gpu-omp-${variant}-${prec} PRIVATE "--save-temps")
         if( CMAKE_Fortran_COMPILER_ID MATCHES "NVHPC" )
             target_compile_options(
                 dwarf-cloudsc-gpu-omp-${variant}-${prec}
@@ -181,7 +188,6 @@ if( HAVE_OMP AND HAVE_OMP_TARGET )
             PRIVATE "-Mcray=pointer"
         )
     endif()
-
 endif()
 
 ### CUDA Fortran variants
