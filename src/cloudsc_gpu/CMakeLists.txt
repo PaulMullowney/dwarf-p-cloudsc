@@ -181,8 +181,11 @@ if( HAVE_CLOUDSC_GPU_OMP_SCC )
             dwarf_cloudsc_gpu.F90
             cloudsc_driver_gpu_omp_scc_mod.F90
             cloudsc_gpu_omp_scc_mod.F90
+	    roctx_profiling.F90
         LIBS
             cloudsc-common-lib
+	    $ENV{ROCM_PATH}/lib/libroctracer64.so
+	    $ENV{ROCM_PATH}/lib/libroctx64.so
         DEFINITIONS ${CLOUDSC_DEFINITIONS} ${CLOUDSC_GPU_OMP_SCC_DEFINITIONS}
     )
 
@@ -215,8 +218,11 @@ if ( HAVE_CLOUDSC_GPU_OMP_SCC_STACK )
             dwarf_cloudsc_gpu.F90
             cloudsc_driver_gpu_omp_scc_stack_mod.F90
             cloudsc_gpu_omp_scc_stack_mod.F90
+	    roctx_profiling.F90
         LIBS
             cloudsc-common-lib
+	    $ENV{ROCM_PATH}/lib/libroctracer64.so
+	    $ENV{ROCM_PATH}/lib/libroctx64.so
 	    DEFINITIONS ${CLOUDSC_DEFINITIONS} ${CLOUDSC_GPU_OMP_SCC_STACK_DEFINITIONS}
     )
 
@@ -259,8 +265,11 @@ if( HAVE_CLOUDSC_GPU_OMP_SCC_HOIST )
             dwarf_cloudsc_gpu.F90
             cloudsc_driver_gpu_omp_scc_hoist_mod.F90
             cloudsc_gpu_omp_scc_hoist_mod.F90
+    	    roctx_profiling.F90
         LIBS
             cloudsc-common-lib
+	    $ENV{ROCM_PATH}/lib/libroctracer64.so
+	    $ENV{ROCM_PATH}/lib/libroctx64.so
         DEFINITIONS ${CLOUDSC_DEFINITIONS} ${CLOUDSC_GPU_OMP_SCC_HOIST_DEFINITIONS}
     )
 
@@ -292,8 +301,11 @@ if ( HAVE_CLOUDSC_GPU_OMP_SCC_K_CACHING )
             dwarf_cloudsc_gpu.F90
             cloudsc_driver_gpu_omp_scc_k_caching_mod.F90
             cloudsc_gpu_omp_scc_k_caching_mod.F90
+    	    roctx_profiling.F90
         LIBS
             cloudsc-common-lib
+	    $ENV{ROCM_PATH}/lib/libroctracer64.so
+	    $ENV{ROCM_PATH}/lib/libroctx64.so
 	    DEFINITIONS ${CLOUDSC_DEFINITIONS} ${CLOUDSC_GPU_OMP_SCC_K_CACHING_DEFINITIONS}
     )
 

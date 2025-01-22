@@ -12,6 +12,8 @@ PROGRAM DWARF_CLOUDSC
 USE PARKIND1, ONLY: JPIM
 USE CLOUDSC_MPI_MOD, ONLY: CLOUDSC_MPI_INIT, CLOUDSC_MPI_END, NUMPROC, IRANK
 USE CLOUDSC_GLOBAL_STATE_MOD, ONLY: CLOUDSC_GLOBAL_STATE
+USE ROCTX_PROFILING, ONLY: roctxMarkA, roctxRangePushA, roctxRangePop
+USE ISO_C_BINDING, ONLY: c_null_char
 
 #ifdef CLOUDSC_GPU_CLAW
 USE CLOUDSC_DRIVER_GPU_CLAW_MOD, ONLY: CLOUDSC_DRIVER_GPU_CLAW
@@ -79,7 +81,7 @@ INTEGER(KIND=JPIM) :: NUMOMP   = 1     ! Number of OpenMP threads for this run
 INTEGER(KIND=JPIM) :: NGPTOTG  = 16384 ! Number of grid points (as read from command line)
 INTEGER(KIND=JPIM) :: NPROMA   = 64   ! NPROMA blocking factor (currently active)
 INTEGER(KIND=JPIM) :: NGPTOT           ! Local number of grid points
-
+INTEGER :: ret
 
 #ifdef CLOUDSC_GPU_SCC_FIELD
 TYPE(CLOUDSC_FIELD_STATE) :: GLOBAL_STATE
@@ -126,6 +128,8 @@ IF (IARGS >= 3) THEN
   READ(CLARG(1:LENARG),*) NPROMA
 ENDIF
 
+ret = roctxRangePushA("GLOBAL_STATE%LOAD"//c_null_char)
+
 #ifdef CLOUDSC_GPU_SCC_FIELD
 ! Create a global memory state using FIELD objects from serialized input data
 CALL GET_ENVIRONMENT_VARIABLE('CLOUDSC_PACKED_STORAGE', PACKED_STORAGE)
@@ -140,6 +144,9 @@ INIT_PINNED_VALUE = TRIM(PINNED_FIELD_MEMORY) == 'ON' .OR. TRIM(PINNED_FIELD_MEM
 CALL GLOBAL_STATE%LOAD(NPROMA, NGPTOT, NGPTOTG)
 #endif
 
+CALL roctxRangePop()
+CALL roctxMarkA("GLOBAL_STATE%LOAD"//c_null_char)
+ret = roctxRangePushA("GLOBAL_STATE%DRIVER"//c_null_char)
 
 #ifdef CLOUDSC_GPU_CLAW
 IF (MODULO(NPROMA, 64) /= 0) THEN
@@ -348,9 +355,15 @@ CALL CLOUDSC_DRIVER_GPU_SCC_FIELD( &
      & GLOBAL_STATE%TENDENCY_TMP, GLOBAL_STATE%TENDENCY_LOC, USE_PACKED)
 #endif
 
+CALL roctxRangePop()
+CALL roctxMarkA("GLOBAL_STATE%DRIVER"//c_null_char)
 
 ! Validate the output against serialized reference data
+ret = roctxRangePushA("GLOBAL_STATE%VALIDATE"//c_null_char)
 CALL GLOBAL_STATE%VALIDATE(NPROMA, NGPTOT, NGPTOTG)
+CALL roctxRangePop()
+CALL roctxMarkA("GLOBAL_STATE%VALIDATE"//c_null_char)
+
 #ifdef CLOUDSC_GPU_SCC_FIELD
 CALL GLOBAL_STATE%FINALIZE()
 #endif

@@ -14,6 +14,8 @@ MODULE CLOUDSC_DRIVER_GPU_OMP_SCC_HOIST_MOD
   USE YOECLDP, ONLY : NCLV, YRECLDP, TECLDP
   USE CLOUDSC_MPI_MOD, ONLY: NUMPROC, IRANK
   USE TIMER_MOD, ONLY : PERFORMANCE_TIMER, GET_THREAD_NUM
+  USE ROCTX_PROFILING, ONLY: roctxMarkA, roctxRangePushA, roctxRangePop
+  USE ISO_C_BINDING, ONLY: c_null_char
 
   USE CLOUDSC_GPU_OMP_SCC_HOIST_MOD, ONLY: CLOUDSC_SCC_HOIST
 
@@ -123,6 +125,7 @@ CONTAINS
 
     ! Local copy of cloud parameters for offload
     TYPE(TECLDP) :: LOCAL_YRECLDP
+    INTEGER :: ret
 
     NGPBLKS = (NGPTOT / NPROMA) + MIN(MOD(NGPTOT,NPROMA), 1)
 1003 format(5x,'NUMPROC=',i0,', NUMOMP=',i0,', NGPTOTG=',i0,', NPROMA=',i0,', NGPBLKS=',i0)
@@ -133,6 +136,8 @@ CONTAINS
     ! Global timer for the parallel region
     CALL TIMER%START(NUMOMP)
 
+    ret = roctxRangePushA("OMP_SCC_HOIST:TARGET_DATA"//c_null_char)
+        
 !$omp target enter data map(alloc: ZFOEALFA, ZTP1, ZLI, ZA, ZAORIG, ZLIQFRAC, ZICEFRAC, ZQX, ZQX0,  &
 !$omp &   ZPFPLSX, ZLNEG, ZQXN2D, ZQSMIX, ZQSLIQ, ZQSICE, ZFOEEWMT,  &
 !$omp &   ZFOEEW, ZFOEELIQT)
@@ -156,6 +161,10 @@ CONTAINS
 !$omp   pfsqlf,pfsqif,pfcqnng, &
 !$omp   pfcqlng ,pfsqrf,pfsqsf,pfcqrng,pfcqsng,pfsqltur, &
 !$omp   pfsqitur,pfplsl,pfplsn,pfhpsl,pfhpsn)
+
+    CALL roctxRangePop()
+    CALL roctxMarkA("OMP_SCC_HOIST:TARGET_DATA"//c_null_char)
+    ret = roctxRangePushA("OMP_SCC_HOIST:KERNEL"//c_null_char)
 
     ! Local timer for each thread
     TID = GET_THREAD_NUM()
@@ -222,7 +231,14 @@ CONTAINS
 
     CALL TIMER%THREAD_END(TID)
 
+    CALL roctxRangePop()
+    CALL roctxMarkA("OMP_SCC_HOIST:KERNEL"//c_null_char)
+    ret = roctxRangePushA("OMP_SCC_HOIST:END_TARGET_DATA"//c_null_char)
+
 !$omp end target data
+
+    CALL roctxRangePop()
+    CALL roctxMarkA("OMP_SCC_HOIST:END_TARGET_DATA"//c_null_char)
 
     CALL TIMER%END()
 

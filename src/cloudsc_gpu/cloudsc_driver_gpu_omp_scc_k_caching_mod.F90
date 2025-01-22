@@ -14,6 +14,8 @@ MODULE CLOUDSC_DRIVER_GPU_OMP_SCC_K_CACHING_MOD
   USE YOECLDP, ONLY : NCLV, YRECLDP, TECLDP
   USE CLOUDSC_MPI_MOD, ONLY: NUMPROC, IRANK
   USE TIMER_MOD, ONLY : PERFORMANCE_TIMER, GET_THREAD_NUM
+  USE ROCTX_PROFILING, ONLY: roctxMarkA, roctxRangePushA, roctxRangePop
+  USE ISO_C_BINDING, ONLY: c_null_char
 
   USE CLOUDSC_GPU_OMP_SCC_K_CACHING_MOD, ONLY: CLOUDSC_SCC_K_CACHING
 
@@ -103,6 +105,7 @@ CONTAINS
 
     ! Local copy of cloud parameters for offload
     TYPE(TECLDP) :: LOCAL_YRECLDP
+    INTEGER :: ret
 
     NGPBLKS = (NGPTOT / NPROMA) + MIN(MOD(NGPTOT,NPROMA), 1)
 1003 format(5x,'NUMPROC=',i0,', NUMOMP=',i0,', NGPTOTG=',i0,', NPROMA=',i0,', NGPBLKS=',i0)
@@ -118,6 +121,8 @@ CONTAINS
     ! moved to the device the in ``acc data`` clause below
     LOCAL_YRECLDP = YRECLDP
 
+    ret = roctxRangePushA("OMP_SCC_K_CACHING:TARGET_DATA"//c_null_char)
+    
 !$omp target data &
 !$omp map(to: &
 !$omp   pt,pq,buffer_cml,buffer_tmp,pvfa, &
@@ -131,6 +136,10 @@ CONTAINS
 !$omp   pfsqlf,pfsqif,pfcqnng, &
 !$omp   pfcqlng ,pfsqrf,pfsqsf,pfcqrng,pfcqsng,pfsqltur, &
 !$omp   pfsqitur,pfplsl,pfplsn,pfhpsl,pfhpsn)
+
+    CALL roctxRangePop()
+    CALL roctxMarkA("OMP_SCC_K_CACHING:TARGET_DATA"//c_null_char)
+    ret = roctxRangePushA("OMP_SCC_K_CACHING:KERNEL"//c_null_char)
 
     ! Local timer for each thread
     TID = GET_THREAD_NUM()
@@ -191,8 +200,14 @@ CONTAINS
 #endif
 
     CALL TIMER%THREAD_END(TID)
+    CALL roctxRangePop()
+    CALL roctxMarkA("OMP_SCC_K_CACHING:KERNEL"//c_null_char)
+    ret = roctxRangePushA("OMP_SCC_K_CACHING:END_TARGET_DATA"//c_null_char)
 
 !$omp end target data
+
+    CALL roctxRangePop()
+    CALL roctxMarkA("OMP_SCC_K_CACHING:END_TARGET_DATA"//c_null_char)
 
     CALL TIMER%END()
 
