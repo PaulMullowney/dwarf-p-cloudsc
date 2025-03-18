@@ -139,7 +139,7 @@ CONTAINS
 #ifdef HAVE_OMP_TARGET_LOOP_CONSTRUCT
 !$omp target teams loop bind(teams) thread_limit(nproma)
 #else
-!$omp target teams distribute thread_limit(nproma)
+!$omp target teams distribute thread_limit(256)
 #endif
     DO JKGLO=1,NGPTOT,NPROMA
        IBL=(JKGLO-1)/NPROMA+1
