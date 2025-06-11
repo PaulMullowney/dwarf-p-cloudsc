@@ -57,7 +57,7 @@ function( cloudsc_add_gpu_exe )
     )
 endfunction()
 
-set( GPU_VARIANTS scc scc-stack scc-hoist scc-k-caching )
+set( GPU_VARIANTS scc scc-stack scc-hoist scc-k-caching scc-raw-stack )
 set( CUDA_VARIANTS scc-cuf scc-cuf-k-caching )
 
 if( CMAKE_Fortran_COMPILER_ID MATCHES "Cray" AND CMAKE_Fortran_COMPILER_VERSION VERSION_EQUAL "16.0.1" )
